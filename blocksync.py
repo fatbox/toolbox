@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """
 Sync two block devices only copying changed blocks
+
+Based losely on the script here:
+http://www.bouncybouncy.net/ramblings/posts/xen_live_migration_without_shared_storage/
+
+However, this version is aimed at two local block devices instead of
+two devices via ssh.
 """
 
 import hashlib
@@ -35,10 +41,12 @@ def sync(source, dest, blocksize):
         if not s_block:
             break
 
+        # calculate our hash sums
         s_sum = hashlib.md5(s_block).digest()
         d_sum = hashlib.md5(d_block).digest()
 
         if s_sum != d_sum:
+            # the blocks don't match
             diff_blocks += 1
 
             # seek back blocksize on the destination and re-write the block
@@ -49,7 +57,6 @@ def sync(source, dest, blocksize):
 
         print "same: %d - diff: %d - %d/%d" % (same_blocks, diff_blocks, same_blocks+diff_blocks, src_size / blocksize),
         print
-
 
 if __name__ == '__main__':
     from optparse import OptionParser
@@ -63,4 +70,8 @@ if __name__ == '__main__':
 
     source = args[0]
     dest = args[1]
+
+    assert os.access(source, os.R_OK)
+    assert os.access(dest, os.W_OK)
+
     sync(source, dest, options.blocksize)
